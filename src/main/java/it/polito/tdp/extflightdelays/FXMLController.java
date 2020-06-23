@@ -1,9 +1,12 @@
 package it.polito.tdp.extflightdelays;
 
 import java.net.URL;
+import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
 
 import it.polito.tdp.extflightdelays.model.Model;
+import it.polito.tdp.extflightdelays.model.StatePair;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -28,7 +31,7 @@ public class FXMLController {
     private Button btnCreaGrafo;
 
     @FXML
-    private ComboBox<?> cmbBoxStati;
+    private ComboBox<String> cmbBoxStati;
 
     @FXML
     private Button btnVisualizzaVelivoli;
@@ -44,19 +47,74 @@ public class FXMLController {
 
     @FXML
     void doCreaGrafo(ActionEvent event) {
-
+    	txtResult.clear();
+    	this.model.createGraph();
+    	this.cmbBoxStati.getItems().clear();
+    	this.cmbBoxStati.getItems().addAll(this.model.getListStates());
+    	this.btnVisualizzaVelivoli.setDisable(false);
+    	this.btnSimula.setDisable(false);
+    	txtResult.setText("Grafo creato!\n");
     }
 
     @FXML
     void doSimula(ActionEvent event) {
+    	txtResult.clear();
+    	Integer T;
+    	Integer G;
+    	try {
+    		T = Integer.parseInt(txtT.getText());
+    		G = Integer.parseInt(txtG.getText());
+    	} catch(NumberFormatException e) {
+    		txtResult.setText("Inserire 2 numeri interi per indicare il numero di turisti (T) e il "
+    				+ "numero di giorni (G) per effettuare la simulazione!\n");
+    		return;
+    	}
+    	if(T <= 0 || G <= 0) {
+    		txtResult.setText("Inserire 2 numeri positivi per indicare il numero di turisti (T) e il "
+    				+ "numero di giorni (G) per effettuare la simulazione!\n");
+    		return;
+    	}
+    	String state = this.cmbBoxStati.getValue();
+    	if(state == null) {
+    		txtResult.setText("Errore: selezionare uno stato dall'apposita tendina per "
+    				+ "procedere con la simulazione!\n");
+    		return;
+    	}
+    	this.model.simulate(T, G, state);
+    	
+    	Map<String, Integer> touristsInEachState = this.model.turistsInEachState();
+    	txtResult.appendText("RISULTATO SIMULAZIONE:\n\n");
+    	for(String s : touristsInEachState.keySet()) {
+    		txtResult.appendText("Stato: " + s + " --- Numero turisti: " + touristsInEachState.get(s) + "\n");
+    	}
 
     }
 
     @FXML
     void doVisualizzaVelivoli(ActionEvent event) {
-
+    	txtResult.clear();
+    	String state = this.cmbBoxStati.getValue();
+    	if(state == null) {
+    		txtResult.setText("Errore: selezionare uno stato dall'apposita tendina per trovare le destinazioni disponibili!\n");
+    		return;
+    	}
+    	List<StatePair> destinations = this.model.getAllDestinations(state);
+    	if(destinations.isEmpty()) {
+    		txtResult.setText("Nessuna destinazione trovata dall'aeroporto selezionato.\n");
+    		return;
+    	}
+    	txtResult.appendText("Destinazioni trovate: \n\n");
+    	Integer count = 0;
+    	for(StatePair sp : destinations) {
+    		txtResult.appendText(sp.getDestination() + " - numero diversi velivoli: " + sp.getWeight() + "; \t ");
+    		count ++;
+    		if(count == 2) {
+    			count = 0;
+    			txtResult.appendText("\n");
+    		}
+    	}
     }
-
+    
     @FXML
     void initialize() {
         assert txtResult != null : "fx:id=\"txtResult\" was not injected: check your FXML file 'ExtFlightDelays.fxml'.";
@@ -71,5 +129,7 @@ public class FXMLController {
 
 	public void setModel(Model model) {
 		this.model = model;
+		this.btnSimula.setDisable(true);
+		this.btnVisualizzaVelivoli.setDisable(true);
 	}
 }

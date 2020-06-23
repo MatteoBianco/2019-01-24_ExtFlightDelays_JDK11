@@ -11,6 +11,7 @@ import java.util.List;
 import it.polito.tdp.extflightdelays.model.Airline;
 import it.polito.tdp.extflightdelays.model.Airport;
 import it.polito.tdp.extflightdelays.model.Flight;
+import it.polito.tdp.extflightdelays.model.StatePair;
 
 public class ExtFlightDelaysDAO {
 
@@ -104,6 +105,59 @@ public class ExtFlightDelaysDAO {
 						rs.getDouble("ELAPSED_TIME"), rs.getInt("DISTANCE"),
 						rs.getTimestamp("ARRIVAL_DATE").toLocalDateTime(), rs.getDouble("ARRIVAL_DELAY"));
 				result.add(flight);
+			}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+
+	public List<String> getListStates() {
+		String sql = "SELECT DISTINCT STATE " + 
+				"FROM airports " + 
+				"ORDER BY STATE";
+		List<String> result = new ArrayList<>();
+
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				result.add(rs.getString("STATE"));
+			}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+	
+	public List<StatePair> getStatePairs() {
+		String sql = "SELECT a1.STATE as origin, a2.STATE AS destination, COUNT(DISTINCT f.TAIL_NUMBER) AS weight " + 
+				"FROM airports AS a1, airports AS a2, flights AS f " + 
+				"WHERE a1.ID = f.ORIGIN_AIRPORT_ID AND a2.ID = f.DESTINATION_AIRPORT_ID " + 
+				"GROUP BY a1.STATE, a2.STATE";
+		List<StatePair> result = new ArrayList<>();
+
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				StatePair sp = new StatePair(rs.getString("origin"),
+						rs.getString("destination"), rs.getInt("weight"));
+				result.add(sp);
 			}
 
 			conn.close();
